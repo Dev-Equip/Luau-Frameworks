@@ -1,6 +1,11 @@
 --[[
     Promise.lua
     Smooth error handling
+
+    --
+  
+    License: MIT License
+    See LICENSE file in the repository root for full license text.
 ]]
 
 
