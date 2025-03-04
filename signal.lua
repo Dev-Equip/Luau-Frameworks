@@ -1,6 +1,11 @@
 --[[
     Signal.lua
     Better bindable events as a singular metable.
+
+    --
+  
+    License: MIT License
+    See LICENSE file in the repository root for full license text.
 ]]
 
 local Signal = {}
