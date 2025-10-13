@@ -171,8 +171,8 @@ function Render.new(adornee: BasePart)
 		SortDirection = "Ascending",
 		Conversion = false,
 
-		PromptProductPurchase = function(self, productId: number)
-			if (not self.BoardSettings.SafeMode) then
+		PromptProductPurchase = function(self, productId: number, forceSafeMode: boolean)
+			if (not self.BoardSettings.SafeMode and not forceSafeMode) then
 				game:GetService("MarketplaceService"):PromptProductPurchase(game:GetService("Players").LocalPlayer, productId)			
 				return
 			end
@@ -1945,7 +1945,7 @@ function Render.new(adornee: BasePart)
 		SettingsProperties.DeveloperProducts.Test.Size = UDim2.fromOffset(125, 40)
 		SettingsProperties.DeveloperProducts.Triggered:Connect(function(button)
 			if (button == "Test") then
-				self:PromptProductPurchase(1651970492)
+				self:PromptProductPurchase(1651970492, true)
 				return
 			end
 
