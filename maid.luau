@@ -13,7 +13,7 @@ function Maid:GiveTask(...)
 	local parameters = table.pack(...)
 	local id, task = #parameters > 1 and parameters[1] or "", #parameters > 1 and parameters[2] or parameters[1]
 
-	local n = 0; for _, _ in self._tasks do n+=1 end
+	local n = 0; for index, _ in self._tasks do if index:find(id) then n+=1 end end
 	n = `{id}{n + 1}`
 	self._tasks[n] = task
 
@@ -36,7 +36,7 @@ end
 
 
 function Maid:DoCleaningById(id: string)
-	for index, task in self._task or {} do
+	for index, task in self._tasks or {} do
 		if (not index:find(id)) then continue end
 		self:_doTask(self._tasks[index])
 		self._tasks[index] = nil
@@ -47,7 +47,7 @@ end
 
 
 function Maid:DoCleaningByType(type)
-	for index, task in self._task or {} do
+	for index, task in self._tasks or {} do
 		if typeof(task) ~= type then continue end 
 
 		self:_doTask(self._tasks[index])
