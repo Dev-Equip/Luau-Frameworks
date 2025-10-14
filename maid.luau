@@ -13,7 +13,7 @@ function Maid:GiveTask(...)
 	local parameters = table.pack(...)
 	local id, task = #parameters > 1 and parameters[1] or "", #parameters > 1 and parameters[2] or parameters[1]
 
-	local n = 0; for _, _ in self._task do n+=1 end
+	local n = 0; for _, _ in self._tasks do n+=1 end
 	n = `{id}{n + 1}`
 	self._tasks[n] = task
 
