@@ -183,9 +183,9 @@ end
 function Class:Destroy()
 	self._maid:DoCleaning()
 	pcall(function()
-		for _, object in self do
+		for _, object in self:GetValues() do
 			if (typeof(object) ~= "Instance") then continue end
-			object:Destroy()
+			pcall(object.Destroy, object)
 		end
 	end)
 end
