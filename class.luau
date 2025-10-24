@@ -1,4 +1,4 @@
-local Class = {}
+local Class, Maid = {}, require("./Maid")
 Class.__index = Class
 
 
@@ -6,97 +6,16 @@ export type classType = {
 	ClassName: string,
 	UniqueId: number,
 
-  GetPropertyChangedSignal: (self: classType) -> RBXScriptSignal,
+    GetPropertyChangedSignal: (self: classType) -> RBXScriptSignal,
 	GetValues: (self: classType) -> {[string]: any},
 	GetAttribute: (self: classType, name: string) -> any,
 	SetAttribute: (self: classType, name: string, value: any) -> classType,
+	BindToClose: (self: classType) -> (),
 	Destroy: (self: classType) -> (),
 
 	Changed: RBXScriptSignal,
 	AttributeChanged: RBXScriptSignal,
 }
-
-
-local Maid do
-	Maid = {}
-	Maid.__index = Maid
-
-
-	function Maid.new()
-		local self = setmetatable({}, Maid)
-		self._tasks = {}
-		return self
-	end
-
-
-	function Maid:GiveTask(task)
-		local n = #self._tasks + 1
-		self._tasks[n] = task
-
-		if (typeof(task) == "thread") then
-			coroutine.resume(task)
-		end
-
-		return function()
-			if self._tasks[n] then
-				self:_doTask(self._tasks[n])
-				self._tasks[n] = nil
-			end
-		end
-	end
-
-
-	function Maid:IsATask(task)
-		return table.find({"RBXScriptConnection", "Instance", "function", "thread", "table", "userdata"}, typeof(task)) ~= nil
-	end
-
-
-	function Maid:DoCleaningByType(type)
-		for i = 1, #self._tasks do 
-			if typeof(self._tasks[i]) ~= type then continue end 
-
-			self:_doTask(self._tasks[i])
-			self._tasks[i] = nil
-		end
-	end
-
-
-	function Maid:DoCleaning()
-		for i = 1, #self._tasks do
-			self:_doTask(self._tasks[i])
-			self._tasks[i] = nil
-		end
-	end
-
-
-	function Maid:_doTask(task)
-		if not task then return end
-
-		local taskType = typeof(task)
-		if taskType == "RBXScriptConnection" then
-			task:Disconnect()
-		elseif taskType == "Instance" then
-			if task.Parent then
-				task:Destroy()
-			end
-		elseif taskType == "function" then
-			task()
-		elseif taskType == "thread" then
-			if coroutine.status(task) ~= "dead" then
-				coroutine.close(task)
-			elseif coroutine.status(task) == "running" then
-				coroutine.yield(task)
-				coroutine.close(task)
-			end
-		elseif taskType == "table" and task.Destroy then
-			task:Destroy()
-		elseif taskType == "userdata" and task.disconnect then
-			task:disconnect()
-		elseif taskType == "table" and task.Cancel then
-			task:Cancel()
-		end
-	end
-end
 
 
 function Class.new(properties: {[string]: any})
@@ -107,7 +26,9 @@ function Class.new(properties: {[string]: any})
 	local internal = {
 		_data = properties,
 		_maid = Maid.new(),
+		_bindtoclose = nil,
 		_originalproperties = {},
+		_destroying = Instance.new("BindableEvent"),
 		_changed = Instance.new("BindableEvent"),
 		_attributechanged = Instance.new("BindableEvent"),
 		_attributes = {},
@@ -118,6 +39,8 @@ function Class.new(properties: {[string]: any})
 		if (index == "UniqueId") then continue end
 		table.insert(internal._originalproperties, index)
 	end
+	
+	internal.Destroying = internal._destroying.Event
 	internal.Changed = internal._changed.Event
 	internal.AttributeChanged = internal._attributechanged.Event
 
@@ -133,7 +56,7 @@ function Class.new(properties: {[string]: any})
 			if old ~= value then
 				internal._data[key] = value
 				if internal._maid:IsATask(value) then
-					internal._maid:GiveTask(value)
+					internal._maid:GiveTask(key, value)
 				end
 				internal._changed:Fire(key, value)
 			end
@@ -180,7 +103,15 @@ function Class:SetAttribute(name: string, value: any)
 end
 
 
+function Class:BindToClose(func)
+	rawset(self, "_bindtoclose", func)
+	return self
+end
+
+
 function Class:Destroy()
+	if (self._bindtoclose) then self:_bindtoclose() end
+	self._destroying:Fire()
 	self._maid:DoCleaning()
 	pcall(function()
 		for _, object in self:GetValues() do
