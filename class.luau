@@ -91,6 +91,11 @@ function Class:GetPropertyChangedSignal(property: string)
 end
 
 
+function Class:GetAttributes()
+	return self._attributes
+end
+
+
 function Class:GetAttribute(name: string)
 	return self._attributes[name]
 end
