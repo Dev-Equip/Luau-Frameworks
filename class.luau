@@ -147,6 +147,34 @@ local Maid do
 	end
 end
 
+local Class, Maid = {}, require("./Maid")
+Class.__index = Class
+
+
+export type classType = {
+	ClassName: string,
+	UniqueId: number,
+
+    GetPropertyChangedSignal: (self: classType) -> RBXScriptSignal,
+	GetValues: (self: classType) -> {[string]: any},
+	GetAttributes: (self: classType) -> {[string]: any},
+	GetAttribute: (self: classType, name: string) -> any,
+	SetAttribute: (self: classType, name: string, value: any) -> classType,
+	AddTag: (self: classType, ...string) -> classType,
+	RemoveTag: (self: classType, ...string) -> classType,
+	HasTag: (self: classType) -> boolean,
+	GetTags: (self: classType) -> {any},
+	BindToClose: (self: classType) -> (),
+	Destroy: (self: classType) -> (),
+
+	Changed: RBXScriptSignal,
+	AttributeChanged: RBXScriptSignal,
+	AttributeAdded: RBXScriptSignal,
+	AttributeRemoved: RBXScriptSignal,
+	TagAdded: RBXScriptSignal,
+	TagRemoved: RBXScriptSignal,
+}
+
 
 function Class.new(properties: {[string]: any})
 	properties = properties or {}
@@ -160,8 +188,13 @@ function Class.new(properties: {[string]: any})
 		_originalproperties = {},
 		_destroying = Instance.new("BindableEvent"),
 		_changed = Instance.new("BindableEvent"),
+		_attributeadded = Instance.new("BindableEvent"),
+		_attributeremoved = Instance.new("BindableEvent"),
 		_attributechanged = Instance.new("BindableEvent"),
 		_attributes = {},
+		_tagadded = Instance.new("BindableEvent"),
+		_tagremoved = Instance.new("BindableEvent"),
+		_tags = {},
 	}
 
 	for index, _ in properties do 
@@ -173,6 +206,10 @@ function Class.new(properties: {[string]: any})
 	internal.Destroying = internal._destroying.Event
 	internal.Changed = internal._changed.Event
 	internal.AttributeChanged = internal._attributechanged.Event
+	internal.AttributeAdded = internal._attributeadded.Event
+	internal.AttributeRemoved = internal._attributeremoved.Event
+	internal.TagAdded = internal._tagadded.Event
+	internal.TagRemoved = internal._tagremoved.Event
 
 	local proxy = setmetatable({}, {
 		__index = function(_, key)
@@ -221,6 +258,27 @@ function Class:GetPropertyChangedSignal(property: string)
 end
 
 
+function Class:GetAttributeChangedSignal(attribute: string)
+    local _event = Instance.new("BindableEvent")
+    self._maid:GiveTask(_event)
+    self._maid:GiveTask(self.AttributeAdded:Connect(function(attributeName: string, value)
+        if (attributeName ~= attribute) then return end
+        _event:Fire(value)
+    end))
+
+	self._maid:GiveTask(self.AttributeChanged:Connect(function(attributeName: string, value)
+        if (attributeName ~= attribute) then return end
+        _event:Fire(value)
+    end))
+
+	self._maid:GiveTask(self.AttributeRemoved:Connect(function(attributeName: string, value)
+        if (attributeName ~= attribute) then return end
+        _event:Fire(nil)
+    end))
+    return _event.Event
+end
+
+
 function Class:GetAttributes()
 	return self._attributes
 end
@@ -232,9 +290,53 @@ end
 
 
 function Class:SetAttribute(name: string, value: any)
+	local added, removed = self._attributes[name] == nil, value == nil
 	self._attributes[name] = value
-	self._attributechanged:Fire(name, value)
+	if (added) then self._attributeadded:Fire(name, value) end
+	if (not added and not removed) then self._attributechanged:Fire(name, value) end
+	if (removed) then self._attributeremoved:Fire(name) end
 	return self
+end
+
+
+function Class:AddTag(...: string)
+	for i, tag in table.pack((...)) do
+		if (typeof(i) == "string") then continue end
+		if (table.find(self._tags, tag)) then continue end
+
+		table.insert(self._tags, tag)
+		self._tagadded:Fire(tag)
+		return self
+	end
+	return self
+end
+
+
+function Class:RemoveTag(...: string)
+	for i, tag in table.pack((...)) do
+		if (typeof(i) == "string") then continue end
+		if (table.find(self._tags, tag) == nil) then continue end
+
+		table.remove(self._tags, table.find(self._tags, tag))
+		self._tagremoved:Fire(tag)
+		return self
+	end
+	return self
+end
+
+
+function Class:HasTag(...: string)
+	local array = {}
+	for i, tag in table.pack((...)) do
+		if (typeof(i) == "string") then continue end
+		array[i] = table.find(self._tags, tag) ~= nil
+	end
+	return table.unpack(array)
+end
+
+
+function Class:GetTags()
+	return self._tags
 end
 
 
@@ -254,6 +356,8 @@ function Class:Destroy()
 			pcall(object.Destroy, object)
 		end
 	end)
+	self = nil
+	return nil
 end
 
 
