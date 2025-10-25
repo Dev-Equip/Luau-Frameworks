@@ -35,6 +35,45 @@ function Maid:IsATask(task)
 end
 
 
+function Maid:RemoveTask(task)
+	for index, _task in self._tasks or {} do
+		if (task ~= _task) then continue end
+		self._tasks[index] = nil
+	end
+
+	return self
+end
+
+
+function Maid:RemoveTaskById(id: string)
+	for index, task in self._tasks or {} do
+		if (not index:find(id)) then continue end
+		self._tasks[index] = nil
+	end
+
+	return self
+end
+
+
+function Maid:RemoveTaskByType(type: string)
+	for index, task in self._tasks or {} do
+		if typeof(task) ~= type then continue end 
+		self._tasks[index] = nil
+	end
+
+	return self
+end
+
+
+function Maid:RemoveAllTasks()
+	for index, task in self._task or {} do
+		self._task[index] = nil
+	end
+
+	return self
+end
+
+
 function Maid:DoCleaningById(id: string)
 	for index, task in self._tasks or {} do
 		if (not index:find(id)) then continue end
@@ -46,7 +85,7 @@ function Maid:DoCleaningById(id: string)
 end
 
 
-function Maid:DoCleaningByType(type)
+function Maid:DoCleaningByType(type: string)
 	for index, task in self._tasks or {} do
 		if typeof(task) ~= type then continue end 
 
