@@ -11,11 +11,19 @@ export type classType = {
 	GetAttributes: (self: classType) -> {[string]: any},
 	GetAttribute: (self: classType, name: string) -> any,
 	SetAttribute: (self: classType, name: string, value: any) -> classType,
+	AddTag: (self: classType, ...string) -> classType,
+	RemoveTag: (self: classType, ...string) -> classType,
+	HasTag: (self: classType) -> boolean,
+	GetTags: (self: classType) -> {any},
 	BindToClose: (self: classType) -> (),
 	Destroy: (self: classType) -> (),
 
 	Changed: RBXScriptSignal,
 	AttributeChanged: RBXScriptSignal,
+	AttributeAdded: RBXScriptSignal,
+	AttributeRemoved: RBXScriptSignal,
+	TagAdded: RBXScriptSignal,
+	TagRemoved: RBXScriptSignal,
 }
 
 
